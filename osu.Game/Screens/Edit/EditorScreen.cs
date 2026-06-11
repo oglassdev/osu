@@ -42,6 +42,11 @@ namespace osu.Game.Screens.Edit
         {
         }
 
+        /// <summary>
+        /// Describes editor-owned chrome to display while this screen is active.
+        /// </summary>
+        public virtual EditorScreenChrome Chrome => EditorScreenChrome.DEFAULT;
+
         #region Clipboard operations
 
         public BindableBool CanCut { get; } = new BindableBool();

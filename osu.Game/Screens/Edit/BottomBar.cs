@@ -17,7 +17,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit
 {
-    internal partial class BottomBar : CompositeDrawable
+    internal partial class BottomBar : VisibilityContainer
     {
         public TestGameplayButton TestGameplayButton { get; private set; } = null!;
 
@@ -94,7 +94,12 @@ namespace osu.Game.Screens.Edit
             }, true);
         }
 
+        protected override void PopIn() => this.FadeIn();
+
+        protected override void PopOut() => this.FadeOut();
+
         protected override bool OnMouseDown(MouseDownEvent e) => true;
+
         protected override bool OnClick(ClickEvent e) => true;
     }
 }
