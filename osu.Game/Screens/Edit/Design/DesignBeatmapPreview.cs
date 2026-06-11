@@ -3,7 +3,6 @@
 
 using System;
 using System.Linq;
-using System.Reflection;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -15,6 +14,7 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.UI;
+
 namespace osu.Game.Screens.Edit.Design
 {
     /// <summary>
@@ -22,12 +22,6 @@ namespace osu.Game.Screens.Edit.Design
     /// </summary>
     internal partial class DesignBeatmapPreview : CompositeDrawable
     {
-        private static readonly MethodInfo add_hit_object_method =
-            typeof(DrawableRuleset<>).GetMethod(nameof(DrawableRuleset<HitObject>.AddHitObject), new[] { typeof(HitObject) })!;
-
-        private static readonly MethodInfo remove_hit_object_method =
-            typeof(DrawableRuleset<>).GetMethod(nameof(DrawableRuleset<HitObject>.RemoveHitObject), new[] { typeof(HitObject) })!;
-
         [Resolved]
         private EditorBeatmap beatmap { get; set; } = null!;
 
@@ -154,13 +148,13 @@ namespace osu.Game.Screens.Edit.Design
 
         private void onHitObjectAdded(HitObject hitObject)
         {
-            invokeHitObjectMethod(add_hit_object_method, hitObject);
+            drawableRuleset?.AddEditorHitObject(hitObject);
             drawableRuleset?.Playfield.PostProcess();
         }
 
         private void onHitObjectRemoved(HitObject hitObject)
         {
-            invokeHitObjectMethod(remove_hit_object_method, hitObject);
+            drawableRuleset?.RemoveEditorHitObject(hitObject);
             drawableRuleset?.Playfield.PostProcess();
         }
 
@@ -177,14 +171,6 @@ namespace osu.Game.Screens.Edit.Design
 
             if (autoplayMod != null)
                 drawableRuleset.SetReplayScore(autoplayMod.CreateScoreFromReplayData(beatmap.PlayableBeatmap, drawableRuleset.Mods));
-        }
-
-        private void invokeHitObjectMethod(MethodInfo method, HitObject hitObject)
-        {
-            if (drawableRuleset == null)
-                return;
-
-            method.Invoke(drawableRuleset, new object[] { hitObject });
         }
 
         protected override void Dispose(bool isDisposing)

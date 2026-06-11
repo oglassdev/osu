@@ -551,26 +551,7 @@ namespace osu.Game.Beatmaps
                 AddFile(setInfo, stream, createBeatmapFilenameFromMetadata(beatmapInfo));
 
                 if (storyboard != null)
-                {
-                    string storyboardFilename = createStoryboardFilenameFromMetadata(beatmapInfo.Metadata);
-                    var existingStoryboard = setInfo.GetFile(storyboardFilename);
-                    bool hasSharedElements = storyboard.Layers.SelectMany(layer => layer.Elements)
-                                                           .Any(element => element.Source == StoryboardElementSource.Shared);
-
-                    if (hasSharedElements)
-                    {
-                        using var storyboardStream = new MemoryStream();
-                        using (var writer = new StreamWriter(storyboardStream, Encoding.UTF8, 1024, true))
-                            new LegacyStoryboardEncoder(storyboard).EncodeStandaloneStoryboard(writer);
-
-                        storyboardStream.Seek(0, SeekOrigin.Begin);
-                        AddFile(setInfo, storyboardStream, storyboardFilename);
-                    }
-                    else if (existingStoryboard != null)
-                    {
-                        DeleteFile(setInfo, existingStoryboard);
-                    }
-                }
+                    syncSharedStoryboardFile(setInfo, storyboard, beatmapInfo.Metadata);
 
                 updateHashAndMarkDirty(setInfo);
 
@@ -607,6 +588,28 @@ namespace osu.Game.Beatmaps
                     baseFilename += $@" ({metadata.Author.Username})";
 
                 return (baseFilename + @".osb").GetValidFilename();
+            }
+
+            void syncSharedStoryboardFile(BeatmapSetInfo setInfo, Storyboard storyboard, IBeatmapMetadataInfo metadata)
+            {
+                string storyboardFilename = createStoryboardFilenameFromMetadata(metadata);
+                var existingStoryboard = setInfo.GetFile(storyboardFilename);
+                bool hasSharedElements = storyboard.Layers.SelectMany(layer => layer.Elements)
+                                                       .Any(element => element.Source == StoryboardElementSource.Shared);
+
+                if (hasSharedElements)
+                {
+                    using var storyboardStream = new MemoryStream();
+                    using (var writer = new StreamWriter(storyboardStream, Encoding.UTF8, 1024, true))
+                        new LegacyStoryboardEncoder(storyboard).EncodeStandaloneStoryboard(writer);
+
+                    storyboardStream.Seek(0, SeekOrigin.Begin);
+                    AddFile(setInfo, storyboardStream, storyboardFilename);
+                }
+                else if (existingStoryboard != null)
+                {
+                    DeleteFile(setInfo, existingStoryboard);
+                }
             }
         }
 

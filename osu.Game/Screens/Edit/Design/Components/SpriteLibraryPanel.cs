@@ -71,6 +71,7 @@ namespace osu.Game.Screens.Edit.Design.Components
         private BasicSearchTextBox searchBox = null!;
         private readonly Bindable<string> searchText = new Bindable<string>(string.Empty);
         private readonly Bindable<FileInfo?> selectedFile = new Bindable<FileInfo?>();
+        private TextureStore? sharedTextureStore;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -114,8 +115,25 @@ namespace osu.Game.Screens.Edit.Design.Components
                 selectedFile.Value = null;
             });
 
+            recreateTextureStore();
             refreshThumbnails();
-            workingBeatmap.BindValueChanged(_ => refreshThumbnails());
+            workingBeatmap.BindValueChanged(_ =>
+            {
+                recreateTextureStore();
+                refreshThumbnails();
+            });
+        }
+
+        private void recreateTextureStore()
+        {
+            sharedTextureStore?.Dispose();
+            sharedTextureStore = new TextureStore(host.Renderer, host.CreateTextureLoaderStore(new RealmFileStore(realm, host.Storage).Store));
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            sharedTextureStore?.Dispose();
+            base.Dispose(isDisposing);
         }
 
         private void importImage(FileInfo file)
@@ -171,6 +189,7 @@ namespace osu.Game.Screens.Edit.Design.Components
             var cells = filenameArray
                         .Select(filename => (Drawable)new SpriteThumbnail(
                             filename,
+                            sharedTextureStore!,
                             armPlacement,
                             deleteAsset,
                             renameAsset))
@@ -258,17 +277,19 @@ namespace osu.Game.Screens.Edit.Design.Components
             private readonly Action<string> onDelete;
             private readonly Action<string, string> onRename;
 
+            private readonly TextureStore textureStore;
             private Sprite sprite = null!;
             private Box placementHighlight = null!;
-            private TextureStore? textureStore;
 
             public SpriteThumbnail(
                 string path,
+                TextureStore textureStore,
                 Action<string, Vector2?> onPlacementRequested,
                 Action<string> onDelete,
                 Action<string, string> onRename)
             {
                 this.path = path;
+                this.textureStore = textureStore;
                 this.onPlacementRequested = onPlacementRequested;
                 this.onDelete = onDelete;
                 this.onRename = onRename;
@@ -279,7 +300,7 @@ namespace osu.Game.Screens.Edit.Design.Components
             }
 
             [BackgroundDependencyLoader]
-            private void load(OverlayColourProvider colourProvider, RealmAccess realmAccess, GameHost gameHost, EditorBeatmap beatmap, DesignStoryboardState state)
+            private void load(OverlayColourProvider colourProvider, EditorBeatmap beatmap, DesignStoryboardState state)
             {
                 string? storagePath = beatmap.BeatmapInfo.BeatmapSet?.GetPathForFile(path);
 
@@ -351,16 +372,7 @@ namespace osu.Game.Screens.Edit.Design.Components
                 }, true);
 
                 if (storagePath != null)
-                {
-                    textureStore = new TextureStore(gameHost.Renderer, gameHost.CreateTextureLoaderStore(new RealmFileStore(realmAccess, gameHost.Storage).Store));
                     sprite.Texture = textureStore.Get(storagePath);
-                }
-            }
-
-            protected override void Dispose(bool isDisposing)
-            {
-                base.Dispose(isDisposing);
-                textureStore?.Dispose();
             }
 
             public MenuItem[] ContextMenuItems => new MenuItem[]

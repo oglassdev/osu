@@ -35,6 +35,7 @@ namespace osu.Game.Screens.Edit.Design
         private DesignStoryboardSelectionOverlay? selectionOverlay;
         private OsuSpriteText placementStatus = null!;
         private int loadGeneration;
+        private int lastStructureSignature;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -67,8 +68,8 @@ namespace osu.Game.Screens.Edit.Design
                 },
             };
 
-            beatmap.TransactionEnded += refreshStoryboard;
-            beatmap.SaveStateTriggered += refreshStoryboard;
+            beatmap.TransactionEnded += onStoryboardChanged;
+            beatmap.SaveStateTriggered += onStoryboardChanged;
         }
 
         protected override void LoadComplete()
@@ -88,7 +89,8 @@ namespace osu.Game.Screens.Edit.Design
                 placementStatus.FadeTo(path.NewValue == null ? 0 : 1, 150);
             }, true);
 
-            refreshStoryboard();
+            lastStructureSignature = computeStructureSignature();
+            rebuildStoryboard();
         }
 
         protected override void Update()
@@ -164,7 +166,38 @@ namespace osu.Game.Screens.Edit.Design
             }
         }
 
-        private void refreshStoryboard()
+        private void onStoryboardChanged()
+        {
+            int signature = computeStructureSignature();
+
+            if (signature == lastStructureSignature)
+                return;
+
+            lastStructureSignature = signature;
+            rebuildStoryboard();
+        }
+
+        private int computeStructureSignature()
+        {
+            int signature = 0;
+
+            foreach (var layer in beatmap.Storyboard.Layers)
+            {
+                signature = HashCode.Combine(signature, layer.Name);
+
+                foreach (var element in layer.Elements)
+                {
+                    signature = HashCode.Combine(signature, element.GetHashCode());
+
+                    if (element is StoryboardSprite sprite)
+                        signature = HashCode.Combine(signature, sprite.Path);
+                }
+            }
+
+            return signature;
+        }
+
+        private void rebuildStoryboard()
         {
             int generation = ++loadGeneration;
 
@@ -263,8 +296,8 @@ namespace osu.Game.Screens.Edit.Design
             if (state.Canvas == this)
                 state.Canvas = null;
 
-            beatmap.TransactionEnded -= refreshStoryboard;
-            beatmap.SaveStateTriggered -= refreshStoryboard;
+            beatmap.TransactionEnded -= onStoryboardChanged;
+            beatmap.SaveStateTriggered -= onStoryboardChanged;
         }
 
     }

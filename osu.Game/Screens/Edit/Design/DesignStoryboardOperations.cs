@@ -66,16 +66,7 @@ namespace osu.Game.Screens.Edit.Design
             beatmap.BeginChange();
 
             var sprite = new StoryboardSprite(source, path, Anchor.Centre, position ?? new Vector2(320, 240));
-            sprite.Commands.AddAlpha(Easing.None, time, time, 1, 1);
-
-            if (textureSize is Vector2 size)
-            {
-                Vector2 vectorScale = ComputeDefaultVectorScale(size);
-
-                if (vectorScale != Vector2.One)
-                    sprite.Commands.AddVectorScale(Easing.None, time, time, vectorScale, vectorScale);
-            }
-
+            initialiseNewElement(sprite, time, textureSize);
             beatmap.Storyboard.GetLayer(@"Foreground").Add(sprite);
 
             beatmap.EndChange();
@@ -114,51 +105,47 @@ namespace osu.Game.Screens.Edit.Design
         public static void ApplySpriteTransform(EditorBeatmap beatmap, StoryboardSprite sprite, DrawableStoryboardSprite drawable, double time)
         {
             beatmap.BeginChange();
-            applySpriteTransform(sprite, drawable, time);
+            CommitDrawableTransform(sprite, drawable, time);
             beatmap.EndChange();
         }
 
-        internal static void applySpriteTransform(StoryboardSprite sprite, DrawableStoryboardSprite drawable, double time)
+        internal static void CommitDrawableTransform(StoryboardSprite sprite, DrawableStoryboardSprite drawable, double time)
         {
-            removeKeyframeAtTime(sprite, StoryboardCommandType.Move, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.Move, time);
             sprite.Commands.AddX(Easing.None, time, time, drawable.Position.X, drawable.Position.X);
             sprite.Commands.AddY(Easing.None, time, time, drawable.Position.Y, drawable.Position.Y);
 
-            removeKeyframeAtTime(sprite, StoryboardCommandType.VectorScale, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.VectorScale, time);
             sprite.Commands.AddVectorScale(Easing.None, time, time, drawable.VectorScale, drawable.VectorScale);
 
-            removeKeyframeAtTime(sprite, StoryboardCommandType.Scale, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.Scale, time);
 
             if (!Precision.AlmostEquals(drawable.Scale.X, 1))
                 sprite.Commands.AddScale(Easing.None, time, time, drawable.Scale.X, drawable.Scale.X);
 
-            removeKeyframeAtTime(sprite, StoryboardCommandType.Rotate, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.Rotate, time);
 
             if (!Precision.AlmostEquals(drawable.Rotation, 0))
                 sprite.Commands.AddRotation(Easing.None, time, time, drawable.Rotation, drawable.Rotation);
 
-            removeKeyframeAtTime(sprite, StoryboardCommandType.FlipHorizontal, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.FlipHorizontal, time);
 
             if (drawable.FlipH)
                 sprite.Commands.AddFlipH(Easing.None, time, time, true, true);
 
-            removeKeyframeAtTime(sprite, StoryboardCommandType.FlipVertical, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, StoryboardCommandType.FlipVertical, time);
 
             if (drawable.FlipV)
                 sprite.Commands.AddFlipV(Easing.None, time, time, true, true);
         }
 
         public static void DeleteSprite(EditorBeatmap beatmap, StoryboardSprite sprite)
-        {
-            beatmap.BeginChange();
-
-            foreach (var layer in beatmap.Storyboard.Layers)
-                layer.Elements.Remove(sprite);
-
-            beatmap.EndChange();
-        }
+            => RemoveElement(beatmap, sprite);
 
         public static void DeleteElement(EditorBeatmap beatmap, IStoryboardElement element)
+            => RemoveElement(beatmap, element);
+
+        public static void RemoveElement(EditorBeatmap beatmap, IStoryboardElement element)
         {
             beatmap.BeginChange();
 
@@ -206,7 +193,6 @@ namespace osu.Game.Screens.Edit.Design
 
             using var stream = workingBeatmap.GetStream(storagePath);
             beatmaps.AddFile(setInfo, stream, newPath);
-            beatmaps.DeleteFile(setInfo, existingFile);
 
             beatmap.BeginChange();
 
@@ -220,6 +206,7 @@ namespace osu.Game.Screens.Edit.Design
             }
 
             beatmap.EndChange();
+            beatmaps.DeleteFile(setInfo, existingFile);
             return true;
         }
 
@@ -260,102 +247,19 @@ namespace osu.Game.Screens.Edit.Design
             double duration = 0)
         {
             beatmap.BeginChange();
-
-            removeKeyframeAtTime(sprite, commandType, time);
-            double endTime = time + duration;
-
-            switch (commandType)
-            {
-                case StoryboardCommandType.Move:
-                {
-                    Vector2 position = getSpritePosition(sprite, drawableSprite);
-                    sprite.Commands.AddX(easing, time, endTime, position.X, position.X);
-                    sprite.Commands.AddY(easing, time, endTime, position.Y, position.Y);
-                    break;
-                }
-
-                case StoryboardCommandType.Scale:
-                {
-                    float scale = getSpriteScale(drawableSprite);
-                    sprite.Commands.AddScale(easing, time, endTime, scale, scale);
-                    break;
-                }
-
-                case StoryboardCommandType.VectorScale:
-                {
-                    Vector2 scale = drawableSprite?.VectorScale ?? Vector2.One;
-                    sprite.Commands.AddVectorScale(easing, time, endTime, scale, scale);
-                    break;
-                }
-
-                case StoryboardCommandType.Fade:
-                {
-                    float alpha = drawableSprite?.Alpha ?? 1;
-                    sprite.Commands.AddAlpha(easing, time, endTime, alpha, alpha);
-                    break;
-                }
-
-                case StoryboardCommandType.Rotate:
-                {
-                    float rotation = getSpriteRotation(drawableSprite);
-                    sprite.Commands.AddRotation(easing, time, endTime, rotation, rotation);
-                    break;
-                }
-
-                case StoryboardCommandType.Colour:
-                {
-                    Color4 colour = getSpriteColour(drawableSprite);
-                    sprite.Commands.AddColour(easing, time, endTime, colour, colour);
-                    break;
-                }
-
-                case StoryboardCommandType.FlipHorizontal:
-                    sprite.Commands.AddFlipH(Easing.None, time, endTime, true, true);
-                    break;
-
-                case StoryboardCommandType.FlipVertical:
-                    sprite.Commands.AddFlipV(Easing.None, time, endTime, true, true);
-                    break;
-
-                case StoryboardCommandType.Additive:
-                {
-                    var additive = new BlendingParameters
-                    {
-                        Source = BlendingType.SrcAlpha,
-                        Destination = BlendingType.One,
-                    };
-
-                    sprite.Commands.AddBlendingParameters(Easing.None, time, endTime, additive, additive);
-                    break;
-                }
-            }
-
+            StoryboardCommandCatalog.AddKeyframe(sprite, commandType, time, drawableSprite, easing, duration);
             beatmap.EndChange();
         }
 
         public static void RemoveKeyframe(EditorBeatmap beatmap, StoryboardSprite sprite, StoryboardCommandType commandType, double time)
         {
             beatmap.BeginChange();
-            removeKeyframeAtTime(sprite, commandType, time);
+            StoryboardCommandCatalog.RemoveAtTime(sprite, commandType, time);
             beatmap.EndChange();
         }
 
-        public static IEnumerable<IStoryboardCommand> GetCommands(StoryboardSprite sprite, StoryboardCommandType commandType) => commandType switch
-        {
-            StoryboardCommandType.Move => sprite.Commands.X.Cast<IStoryboardCommand>()
-                                                   .Concat(sprite.Commands.Y)
-                                                   .GroupBy(c => (c.StartTime, c.EndTime))
-                                                   .Select(g => g.First()),
-            StoryboardCommandType.Scale => sprite.Commands.Scale,
-            StoryboardCommandType.VectorScale => sprite.Commands.VectorScale,
-            StoryboardCommandType.Fade => sprite.Commands.Alpha,
-            StoryboardCommandType.Rotate => sprite.Commands.Rotation,
-            StoryboardCommandType.Colour => sprite.Commands.Colour,
-            StoryboardCommandType.FlipHorizontal => sprite.Commands.FlipH,
-            StoryboardCommandType.FlipVertical => sprite.Commands.FlipV,
-            StoryboardCommandType.Additive => sprite.Commands.BlendingParameters,
-            _ => Array.Empty<IStoryboardCommand>(),
-        };
+        public static IEnumerable<IStoryboardCommand> GetCommands(StoryboardSprite sprite, StoryboardCommandType commandType)
+            => StoryboardCommandCatalog.GetCommands(sprite, commandType);
 
         public static double? FindAdjacentKeyframeTime(StoryboardSprite sprite, StoryboardCommandType commandType, double time, int direction)
         {
@@ -398,16 +302,7 @@ namespace osu.Game.Screens.Edit.Design
             beatmap.BeginChange();
 
             var animation = new StoryboardAnimation(source, path, Anchor.Centre, new Vector2(320, 240), frameCount, frameDelay, loopType);
-            animation.Commands.AddAlpha(Easing.None, time, time, 1, 1);
-
-            if (textureSize is Vector2 size)
-            {
-                Vector2 vectorScale = ComputeDefaultVectorScale(size);
-
-                if (vectorScale != Vector2.One)
-                    animation.Commands.AddVectorScale(Easing.None, time, time, vectorScale, vectorScale);
-            }
-
+            initialiseNewElement(animation, time, textureSize);
             beatmap.Storyboard.GetLayer(@"Foreground").Add(animation);
 
             beatmap.EndChange();
@@ -586,67 +481,17 @@ namespace osu.Game.Screens.Edit.Design
             }
         }
 
-        private static void removeKeyframeAtTime(StoryboardSprite sprite, StoryboardCommandType commandType, double time)
+        private static void initialiseNewElement(StoryboardSprite element, double time, Vector2? textureSize)
         {
-            switch (commandType)
+            element.Commands.AddAlpha(Easing.None, time, time, 1, 1);
+
+            if (textureSize is Vector2 size)
             {
-                case StoryboardCommandType.Move:
-                    removeAtTime(sprite.Commands.X, time, sprite.Commands.RemoveX);
-                    removeAtTime(sprite.Commands.Y, time, sprite.Commands.RemoveY);
-                    break;
+                Vector2 vectorScale = ComputeDefaultVectorScale(size);
 
-                case StoryboardCommandType.Scale:
-                    removeAtTime(sprite.Commands.Scale, time, sprite.Commands.RemoveScale);
-                    break;
-
-                case StoryboardCommandType.VectorScale:
-                    removeAtTime(sprite.Commands.VectorScale, time, sprite.Commands.RemoveVectorScale);
-                    break;
-
-                case StoryboardCommandType.Fade:
-                    removeAtTime(sprite.Commands.Alpha, time, sprite.Commands.RemoveAlpha);
-                    break;
-
-                case StoryboardCommandType.Rotate:
-                    removeAtTime(sprite.Commands.Rotation, time, sprite.Commands.RemoveRotation);
-                    break;
-
-                case StoryboardCommandType.Colour:
-                    removeAtTime(sprite.Commands.Colour, time, sprite.Commands.RemoveColour);
-                    break;
-
-                case StoryboardCommandType.FlipHorizontal:
-                    removeAtTime(sprite.Commands.FlipH, time, sprite.Commands.RemoveFlipH);
-                    break;
-
-                case StoryboardCommandType.FlipVertical:
-                    removeAtTime(sprite.Commands.FlipV, time, sprite.Commands.RemoveFlipV);
-                    break;
-
-                case StoryboardCommandType.Additive:
-                    removeAtTime(sprite.Commands.BlendingParameters, time, sprite.Commands.RemoveBlendingParameters);
-                    break;
+                if (vectorScale != Vector2.One)
+                    element.Commands.AddVectorScale(Easing.None, time, time, vectorScale, vectorScale);
             }
-        }
-
-        private static Vector2 getSpritePosition(StoryboardSprite sprite, DrawableStoryboardSprite? drawableSprite)
-            => drawableSprite?.Position ?? sprite.InitialPosition;
-
-        private static float getSpriteScale(DrawableStoryboardSprite? drawableSprite)
-            => drawableSprite?.Scale.X ?? 1;
-
-        private static float getSpriteRotation(DrawableStoryboardSprite? drawableSprite)
-            => drawableSprite?.Rotation ?? 0;
-
-        private static Color4 getSpriteColour(DrawableStoryboardSprite? drawableSprite)
-            => drawableSprite?.Colour ?? Color4.White;
-
-        private static void removeAtTime<T>(System.Collections.Generic.IReadOnlyList<StoryboardCommand<T>> commands, double time, Func<StoryboardCommand<T>, bool> remove)
-        {
-            var command = commands.FirstOrDefault(c => Math.Abs(c.StartTime - time) < KEYFRAME_TIME_EPSILON);
-
-            if (command != null)
-                remove(command);
         }
     }
 }

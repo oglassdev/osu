@@ -2,11 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Graphics.UserInterface;
@@ -37,6 +40,7 @@ namespace osu.Game.Screens.Edit.Design.Components
         private EditorClock clock { get; set; } = null!;
 
         private EditorRadioButtonCollection commandTypeButtons = null!;
+        private readonly Dictionary<StoryboardCommandType, RadioButton> commandButtonsByType = new Dictionary<StoryboardCommandType, RadioButton>();
         private GridContainer originGrid = null!;
         private FormSliderBar<float> widthSlider = null!;
         private FormSliderBar<float> heightSlider = null!;
@@ -48,18 +52,9 @@ namespace osu.Game.Screens.Edit.Design.Components
         {
             commandTypeButtons = new EditorRadioButtonCollection { RelativeSizeAxes = Axes.X };
 
-            commandTypeButtons.Items = new[]
-            {
-                createCommandButton(@"Move", StoryboardCommandType.Move, getCommandIcon(StoryboardCommandType.Move)),
-                createCommandButton(@"Scale", StoryboardCommandType.Scale, getCommandIcon(StoryboardCommandType.Scale)),
-                createCommandButton(@"Vector scale", StoryboardCommandType.VectorScale, getCommandIcon(StoryboardCommandType.VectorScale)),
-                createCommandButton(@"Fade", StoryboardCommandType.Fade, getCommandIcon(StoryboardCommandType.Fade)),
-                createCommandButton(@"Rotate", StoryboardCommandType.Rotate, getCommandIcon(StoryboardCommandType.Rotate)),
-                createCommandButton(@"Colour", StoryboardCommandType.Colour, getCommandIcon(StoryboardCommandType.Colour)),
-                createCommandButton(@"Flip horizontal", StoryboardCommandType.FlipHorizontal, getCommandIcon(StoryboardCommandType.FlipHorizontal)),
-                createCommandButton(@"Flip vertical", StoryboardCommandType.FlipVertical, getCommandIcon(StoryboardCommandType.FlipVertical)),
-                createCommandButton(@"Additive", StoryboardCommandType.Additive, getCommandIcon(StoryboardCommandType.Additive)),
-            };
+            commandTypeButtons.Items = StoryboardCommandCatalog.All
+                .Select(descriptor => createCommandButton(descriptor))
+                .ToArray();
 
             const float origin_button_size = 28;
 
@@ -169,21 +164,13 @@ namespace osu.Game.Screens.Edit.Design.Components
 
             state.SelectedCommandType.BindValueChanged(type =>
             {
-                foreach (var button in commandTypeButtons.Items)
-                {
-                    if (button.Label == type.NewValue.ToString())
-                        button.Select();
-                }
+                if (commandButtonsByType.TryGetValue(type.NewValue, out var button))
+                    button.Select();
             }, true);
 
             state.SelectedSprite.BindValueChanged(_ => updateTransformSliders(), true);
+            state.SelectedCommandType.BindValueChanged(_ => updateTransformSlidersFromDrawable());
             beatmap.TransactionEnded += updateTransformSliders;
-        }
-
-        protected override void Update()
-        {
-            base.Update();
-            updateTransformSlidersFromDrawable();
         }
 
         protected override void Dispose(bool isDisposing)
@@ -272,29 +259,20 @@ namespace osu.Game.Screens.Edit.Design.Components
             DesignStoryboardOperations.ApplySpriteTransform(beatmap, sprite, drawable, clock.CurrentTimeAccurate);
         }
 
-        private RadioButton createCommandButton(string label, StoryboardCommandType type, IconUsage icon)
+        private RadioButton createCommandButton(StoryboardCommandDescriptor descriptor)
         {
-            var button = new RadioButton(label, () => state.SelectedCommandType.Value = type, () => new SpriteIcon { Icon = icon });
+            var button = new RadioButton(
+                descriptor.DisplayName,
+                () => state.SelectedCommandType.Value = descriptor.Type,
+                () => new SpriteIcon { Icon = descriptor.Icon });
 
-            if (state.SelectedCommandType.Value == type)
+            commandButtonsByType[descriptor.Type] = button;
+
+            if (state.SelectedCommandType.Value == descriptor.Type)
                 button.Select();
 
             return button;
         }
-
-        private static IconUsage getCommandIcon(StoryboardCommandType type) => type switch
-        {
-            StoryboardCommandType.Move => FontAwesome.Solid.ArrowsAlt,
-            StoryboardCommandType.Scale => FontAwesome.Solid.SearchPlus,
-            StoryboardCommandType.VectorScale => FontAwesome.Solid.CompressArrowsAlt,
-            StoryboardCommandType.Fade => FontAwesome.Solid.Adjust,
-            StoryboardCommandType.Rotate => FontAwesome.Solid.Sync,
-            StoryboardCommandType.Colour => FontAwesome.Solid.Palette,
-            StoryboardCommandType.FlipHorizontal => FontAwesome.Solid.ArrowsAltH,
-            StoryboardCommandType.FlipVertical => FontAwesome.Solid.ArrowsAltV,
-            StoryboardCommandType.Additive => FontAwesome.Solid.Plus,
-            _ => FontAwesome.Solid.Question,
-        };
 
         private Drawable[] createOriginRow(Anchor[] anchors, int startIndex)
         {

@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Storyboards;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit.Design.Components
@@ -45,8 +46,13 @@ namespace osu.Game.Screens.Edit.Design.Components
 
             beatmap.TransactionEnded += refresh;
             beatmap.SaveStateTriggered += refresh;
+            clock.TrackChanged += updateRelativeChildSize;
+            updateRelativeChildSize();
             refresh();
         }
+
+        private void updateRelativeChildSize()
+            => tracks.RelativeChildSize = new Vector2((float)Math.Max(1, clock.TrackLength), 1);
 
         private void refresh()
         {
@@ -83,6 +89,7 @@ namespace osu.Game.Screens.Edit.Design.Components
         {
             beatmap.TransactionEnded -= refresh;
             beatmap.SaveStateTriggered -= refresh;
+            clock.TrackChanged -= updateRelativeChildSize;
             base.Dispose(isDisposing);
         }
 

@@ -279,6 +279,20 @@ namespace osu.Game.Rulesets.UI
             return false;
         }
 
+        public override void AddEditorHitObject(HitObject hitObject)
+        {
+            if (hitObject is TObject typed)
+                AddHitObject(typed);
+        }
+
+        public override bool RemoveEditorHitObject(HitObject hitObject)
+        {
+            if (hitObject is TObject typed)
+                return RemoveHitObject(typed);
+
+            return false;
+        }
+
         public sealed override void SetRecordTarget(Score score)
         {
             if (!(KeyBindingInputManager is IHasRecordingHandler recordingInputManager))
@@ -490,6 +504,18 @@ namespace osu.Game.Rulesets.UI
         /// All the converted hit objects contained by this hit renderer.
         /// </summary>
         public abstract IEnumerable<HitObject> Objects { get; }
+
+        /// <summary>
+        /// Adds a <see cref="HitObject"/> to the playfield for editor preview purposes.
+        /// </summary>
+        public virtual void AddEditorHitObject(HitObject hitObject)
+        {
+        }
+
+        /// <summary>
+        /// Removes a <see cref="HitObject"/> from the playfield for editor preview purposes.
+        /// </summary>
+        public virtual bool RemoveEditorHitObject(HitObject hitObject) => false;
 
         /// <summary>
         /// The point in time at which gameplay starts, including any required lead-in for display purposes.

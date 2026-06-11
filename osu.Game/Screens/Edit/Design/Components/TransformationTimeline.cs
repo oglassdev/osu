@@ -34,23 +34,11 @@ namespace osu.Game.Screens.Edit.Design.Components
         [Resolved]
         private DesignStoryboardState state { get; set; } = null!;
 
-        private readonly StoryboardCommandType[] commandTypes =
-        {
-            StoryboardCommandType.Move,
-            StoryboardCommandType.Scale,
-            StoryboardCommandType.VectorScale,
-            StoryboardCommandType.Fade,
-            StoryboardCommandType.Rotate,
-            StoryboardCommandType.Colour,
-            StoryboardCommandType.FlipHorizontal,
-            StoryboardCommandType.FlipVertical,
-            StoryboardCommandType.Additive,
-        };
-
         private readonly List<Container> trackContainers = new List<Container>();
         private OsuSpriteText selectionText = null!;
         private Container timeMarker = null!;
-        private Color4[] commandColours = null!;
+        private StoryboardCommandDescriptor[] commandDescriptors = null!;
+        private OsuColour osuColours = null!;
         private double viewStart;
         private double viewEnd = 1;
         private float zoom = 1;
@@ -60,18 +48,8 @@ namespace osu.Game.Screens.Edit.Design.Components
         {
             RelativeSizeAxes = Axes.Both;
 
-            commandColours = new[]
-            {
-                colours.Green1,
-                colours.Red1,
-                colours.Red0,
-                colours.Pink1,
-                colours.Orange1,
-                colours.Pink0,
-                colours.Blue1,
-                colours.Blue0,
-                colours.Purple1,
-            };
+            osuColours = colours;
+            commandDescriptors = StoryboardCommandCatalog.All.ToArray();
 
             var rows = new GridContainer
             {
@@ -158,11 +136,11 @@ namespace osu.Game.Screens.Edit.Design.Components
                 Direction = FillDirection.Vertical,
             };
 
-            for (int i = 0; i < commandTypes.Length; i++)
+            for (int i = 0; i < commandDescriptors.Length; i++)
             {
-                var type = commandTypes[i];
+                var descriptor = commandDescriptors[i];
 
-                flow.Add(new TimelineLabel(type, commandColours[i], () => state.SelectedCommandType.Value = type)
+                flow.Add(new TimelineLabel(descriptor.DisplayName, descriptor.GetTimelineColour(osuColours), () => state.SelectedCommandType.Value = descriptor.Type)
                 {
                     RelativeSizeAxes = Axes.X,
                     Height = 18,
@@ -192,7 +170,7 @@ namespace osu.Game.Screens.Edit.Design.Components
                 Direction = FillDirection.Vertical,
             };
 
-            for (int i = 0; i < commandTypes.Length; i++)
+            for (int i = 0; i < commandDescriptors.Length; i++)
             {
                 var track = new Container
                 {
@@ -282,7 +260,7 @@ namespace osu.Game.Screens.Edit.Design.Components
                 return;
             }
 
-            var allCommands = commandTypes.SelectMany(type => DesignStoryboardOperations.GetCommands(sprite, type)).ToArray();
+            var allCommands = commandDescriptors.SelectMany(descriptor => descriptor.GetCommands(sprite)).ToArray();
             double firstTime = allCommands.Length > 0 ? allCommands.Min(c => c.StartTime) : clock.CurrentTimeAccurate;
             double lastTime = allCommands.Length > 0 ? allCommands.Max(c => c.EndTime) : clock.CurrentTimeAccurate;
             double baseSpan = Math.Max(1000, lastTime - firstTime);
@@ -295,12 +273,18 @@ namespace osu.Game.Screens.Edit.Design.Components
             if (viewEnd - viewStart < 1)
                 viewEnd = viewStart + 1;
 
-            for (int i = 0; i < commandTypes.Length; i++)
+            for (int i = 0; i < commandDescriptors.Length; i++)
             {
-                StoryboardCommandType type = commandTypes[i];
+                var descriptor = commandDescriptors[i];
 
-                foreach (var command in DesignStoryboardOperations.GetCommands(sprite, type))
-                    trackContainers[i].Add(new CommandSpan(command, commandColours[i], () => selectCommand(type, command.StartTime), normaliseTime));
+                foreach (var command in descriptor.GetCommands(sprite))
+                {
+                    trackContainers[i].Add(new CommandSpan(
+                        command,
+                        descriptor.GetTimelineColour(osuColours),
+                        () => selectCommand(descriptor.Type, command.StartTime),
+                        normaliseTime));
+                }
             }
 
             updateTimeMarker();
@@ -344,7 +328,7 @@ namespace osu.Game.Screens.Edit.Design.Components
         {
             private readonly Action action;
 
-            public TimelineLabel(StoryboardCommandType type, Color4 colour, Action action)
+            public TimelineLabel(string label, Color4 colour, Action action)
             {
                 this.action = action;
 
@@ -363,7 +347,7 @@ namespace osu.Game.Screens.Edit.Design.Components
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Position = new Vector2(24, 0),
-                        Text = type.ToString(),
+                        Text = label,
                         Font = OsuFont.Default.With(size: 12),
                     },
                 };

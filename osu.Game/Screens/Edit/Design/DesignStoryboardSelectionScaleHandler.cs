@@ -149,7 +149,7 @@ namespace osu.Game.Screens.Edit.Design
             var sprite = state.SelectedSprite.Value;
 
             if (drawable != null && sprite != null)
-                DesignStoryboardOperations.applySpriteTransform(sprite, drawable, clock.CurrentTimeAccurate);
+                DesignStoryboardOperations.CommitDrawableTransform(sprite, drawable, clock.CurrentTimeAccurate);
 
             beatmap.EndChange();
 
