@@ -6,6 +6,7 @@
 using System.IO;
 using System.Text;
 using NUnit.Framework;
+using osu.Framework.Graphics;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Formats;
@@ -16,6 +17,7 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Screens.Edit;
+using osu.Game.Storyboards;
 using osuTK;
 using Decoder = osu.Game.Beatmaps.Formats.Decoder;
 
@@ -316,6 +318,26 @@ namespace osu.Game.Tests.Editing
         }
 
         [Test]
+        public void TestStoryboardPatch()
+        {
+            var sprite = new StoryboardSprite(StoryboardElementSource.Beatmap, @"sb/sprite.png", Anchor.Centre, new Vector2(320, 240));
+            sprite.Commands.AddAlpha(Easing.None, 0, 0, 1, 1);
+            current.Storyboard.GetLayer(@"Foreground").Add(sprite);
+
+            var patch = new OsuBeatmap
+            {
+                BeatmapInfo =
+                {
+                    Ruleset = new OsuRuleset().RulesetInfo
+                }
+            };
+
+            patcher.Patch(encode(current, current.Storyboard), encode(patch, new Storyboard()));
+
+            Assert.That(current.Storyboard.GetLayer(@"Foreground").Elements, Is.Empty);
+        }
+
+        [Test]
         public void TestChangeHitObjectAtSameTime()
         {
             current.AddRange(new[]
@@ -348,7 +370,7 @@ namespace osu.Game.Tests.Editing
             patch = decode(encode(patch));
 
             // Apply the patch.
-            patcher.Patch(encode(current), encode(patch));
+            patcher.Patch(encode(current, current.Storyboard), encode(patch));
 
             // Convert beatmaps to strings for assertion purposes.
             string currentStr = Encoding.ASCII.GetString(encode(current));
@@ -357,12 +379,12 @@ namespace osu.Game.Tests.Editing
             Assert.That(currentStr, Is.EqualTo(patchStr));
         }
 
-        private byte[] encode(IBeatmap beatmap)
+        private byte[] encode(IBeatmap beatmap, Storyboard storyboard = null)
         {
             using (var encoded = new MemoryStream())
             {
                 using (var sw = new StreamWriter(encoded))
-                    new LegacyBeatmapEncoder(beatmap, null, null).Encode(sw);
+                    new LegacyBeatmapEncoder(beatmap, null, storyboard).Encode(sw);
 
                 return encoded.ToArray();
             }

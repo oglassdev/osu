@@ -550,6 +550,28 @@ namespace osu.Game.Beatmaps
 
                 AddFile(setInfo, stream, createBeatmapFilenameFromMetadata(beatmapInfo));
 
+                if (storyboard != null)
+                {
+                    string storyboardFilename = createStoryboardFilenameFromMetadata(beatmapInfo.Metadata);
+                    var existingStoryboard = setInfo.GetFile(storyboardFilename);
+                    bool hasSharedElements = storyboard.Layers.SelectMany(layer => layer.Elements)
+                                                           .Any(element => element.Source == StoryboardElementSource.Shared);
+
+                    if (hasSharedElements)
+                    {
+                        using var storyboardStream = new MemoryStream();
+                        using (var writer = new StreamWriter(storyboardStream, Encoding.UTF8, 1024, true))
+                            new LegacyStoryboardEncoder(storyboard).EncodeStandaloneStoryboard(writer);
+
+                        storyboardStream.Seek(0, SeekOrigin.Begin);
+                        AddFile(setInfo, storyboardStream, storyboardFilename);
+                    }
+                    else if (existingStoryboard != null)
+                    {
+                        DeleteFile(setInfo, existingStoryboard);
+                    }
+                }
+
                 updateHashAndMarkDirty(setInfo);
 
                 var liveBeatmapSet = r.Find<BeatmapSetInfo>(setInfo.ID)!;
@@ -573,6 +595,18 @@ namespace osu.Game.Beatmaps
             {
                 var metadata = beatmapInfo.Metadata;
                 return $"{metadata.Artist} - {metadata.Title} ({metadata.Author.Username}) [{beatmapInfo.DifficultyName}].osu".GetValidFilename();
+            }
+
+            static string createStoryboardFilenameFromMetadata(IBeatmapMetadataInfo metadata)
+            {
+                string baseFilename = metadata.Artist.Length > 0
+                    ? metadata.Artist + @" - " + metadata.Title
+                    : Path.GetFileNameWithoutExtension(metadata.AudioFile);
+
+                if (metadata.Author.Username.Length > 0)
+                    baseFilename += $@" ({metadata.Author.Username})";
+
+                return (baseFilename + @".osb").GetValidFilename();
             }
         }
 

@@ -6,6 +6,7 @@ using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using System.Linq;
 using osuTK;
 
 namespace osu.Game.Storyboards.Drawables
@@ -18,6 +19,8 @@ namespace osu.Game.Storyboards.Drawables
         public override bool IsPresent => Enabled && base.IsPresent;
 
         protected LayerElementContainer ElementContainer { get; }
+
+        public IEnumerable<Drawable> DrawableElements => ElementContainer.Elements;
 
         public DrawableStoryboardLayer(StoryboardLayer layer)
         {
@@ -50,7 +53,7 @@ namespace osu.Game.Storyboards.Drawables
             [BackgroundDependencyLoader]
             private void load(CancellationToken? cancellationToken)
             {
-                foreach (var element in storyboardLayer.Elements)
+                foreach (var element in storyboardLayer.Elements.ToArray())
                 {
                     cancellationToken?.ThrowIfCancellationRequested();
 

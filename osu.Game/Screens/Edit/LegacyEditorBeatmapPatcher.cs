@@ -20,6 +20,7 @@ using osu.Game.Extensions;
 using osu.Game.IO;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Skinning;
+using osu.Game.Storyboards;
 using Decoder = osu.Game.Beatmaps.Formats.Decoder;
 
 namespace osu.Game.Screens.Edit
@@ -48,7 +49,40 @@ namespace osu.Game.Screens.Edit
             processBreaks(() => newBeatmap ??= readBeatmap(newState));
             processBookmarks(() => newBeatmap ??= readBeatmap(newState));
             processHitObjectLocalData(() => newBeatmap ??= readBeatmap(newState));
+            processStoryboard(result, newState);
             editorBeatmap.EndChange();
+        }
+
+        private void processStoryboard(DiffResult result, byte[] newState)
+        {
+            findChangedIndices(result, LegacyDecoder<Beatmap>.Section.Events, out var removedIndices, out var addedIndices);
+
+            if (removedIndices.Count == 0 && addedIndices.Count == 0)
+                return;
+
+            applyStoryboard(decodeStoryboard(newState));
+        }
+
+        private void applyStoryboard(Storyboard source)
+        {
+            var target = editorBeatmap.Storyboard;
+
+            target.UseSkinSprites = source.UseSkinSprites;
+            target.BackgroundOffset = source.BackgroundOffset;
+            editorBeatmap.WidescreenStoryboard = source.Beatmap.WidescreenStoryboard;
+
+            foreach (var layer in target.Layers)
+                layer.Elements.Clear();
+
+            foreach (var sourceLayer in source.Layers)
+            {
+                var layer = target.GetLayer(sourceLayer.Name);
+                layer.VisibleWhenPassing = sourceLayer.VisibleWhenPassing;
+                layer.VisibleWhenFailing = sourceLayer.VisibleWhenFailing;
+
+                foreach (var element in sourceLayer.Elements)
+                    layer.Elements.Add(element);
+            }
         }
 
         private void processTimingPoints(Func<IBeatmap> getNewBeatmap)
@@ -241,6 +275,13 @@ namespace osu.Game.Screens.Edit
                 decoded.BeatmapInfo.Ruleset = editorBeatmap.BeatmapInfo.Ruleset;
                 return new PassThroughWorkingBeatmap(decoded).GetPlayableBeatmap(editorBeatmap.BeatmapInfo.Ruleset);
             }
+        }
+
+        private Storyboard decodeStoryboard(byte[] state)
+        {
+            using (var stream = new MemoryStream(state))
+            using (var reader = new LineBufferedReader(stream, true))
+                return Decoder.GetDecoder<Storyboard>(reader).Decode(reader);
         }
 
         private class PassThroughWorkingBeatmap : WorkingBeatmap

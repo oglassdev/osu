@@ -126,5 +126,50 @@ namespace osu.Game.Storyboards.Commands
             if (command.EndTime > EndTime)
                 EndTime = command.EndTime;
         }
+
+        public bool RemoveX(StoryboardCommand<float> command) => removeCommand(x, command);
+
+        public bool RemoveY(StoryboardCommand<float> command) => removeCommand(y, command);
+
+        public bool RemoveScale(StoryboardCommand<float> command) => removeCommand(scale, command);
+
+        public bool RemoveVectorScale(StoryboardCommand<Vector2> command) => removeCommand(vectorScale, command);
+
+        public bool RemoveRotation(StoryboardCommand<float> command) => removeCommand(rotation, command);
+
+        public bool RemoveColour(StoryboardCommand<Color4> command) => removeCommand(colour, command);
+
+        public bool RemoveAlpha(StoryboardCommand<float> command) => removeCommand(alpha, command);
+
+        public bool RemoveBlendingParameters(StoryboardCommand<BlendingParameters> command) => removeCommand(blendingParameters, command);
+
+        public bool RemoveFlipH(StoryboardCommand<bool> command) => removeCommand(flipH, command);
+
+        public bool RemoveFlipV(StoryboardCommand<bool> command) => removeCommand(flipV, command);
+
+        private bool removeCommand<T>(ICollection<StoryboardCommand<T>> list, StoryboardCommand<T> command)
+        {
+            if (!list.Remove(command))
+                return false;
+
+            updateCommandMetadata();
+            return true;
+        }
+
+        private void updateCommandMetadata()
+        {
+            HasCommands = lists.Any(l => l.Count > 0);
+
+            if (!HasCommands)
+            {
+                StartTime = double.MaxValue;
+                EndTime = double.MinValue;
+                return;
+            }
+
+            var allCommands = AllCommands.ToArray();
+            StartTime = allCommands.Min(c => c.StartTime);
+            EndTime = allCommands.Max(c => c.EndTime);
+        }
     }
 }
