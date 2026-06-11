@@ -392,9 +392,8 @@ namespace osu.Game.Screens.Edit
                                 Direction = FillDirection.Horizontal,
                                 Children = new Drawable[]
                                 {
-                                    new EditorMenuBar(false)
+                                    new EditorMenuBar.TopMenuBar
                                     {
-                                        RelativeSizeAxes = Axes.Y,
                                         MaxHeight = 600,
                                         Items = new[]
                                         {
@@ -1155,7 +1154,7 @@ namespace osu.Game.Screens.Edit
         {
             EditorScreenChrome chrome = currentScreen?.Chrome ?? EditorScreenChrome.DEFAULT;
 
-            contextMenuBar.BindTo(chrome.ContextMenus);
+            contextMenuBar.SetItems(chrome.ContextMenuItems);
 
             screenAreaContainer.Padding = new MarginPadding
             {

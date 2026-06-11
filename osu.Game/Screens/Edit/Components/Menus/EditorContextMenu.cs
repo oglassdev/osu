@@ -1,11 +1,10 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
@@ -17,61 +16,25 @@ using osuTK;
 
 namespace osu.Game.Screens.Edit.Components.Menus
 {
-    public partial class EditorMenuBar : OsuMenu
+    /// <summary>
+    /// A compact horizontal menu bar for screen-specific context menus shown alongside <see cref="EditorMenuBar"/>.
+    /// </summary>
+    internal partial class EditorContextMenu : OsuMenu
     {
-        private const float heading_area = 114;
-
-        public EditorMenuBar()
+        public EditorContextMenu()
             : base(Direction.Horizontal, true)
         {
-            RelativeSizeAxes = Axes.X;
-
             MaskingContainer.CornerRadius = 0;
             ItemsContainer.Padding = new MarginPadding();
-
-            ContentContainer.Margin = new MarginPadding { Left = heading_area };
             ContentContainer.Masking = true;
         }
 
+        protected override void UpdateSize(Vector2 newSize) => Width = newSize.X;
+
         [BackgroundDependencyLoader]
-        private void load(OverlayColourProvider colourProvider, TextureStore textures)
+        private void load(OverlayColourProvider colourProvider)
         {
-            BackgroundColour = colourProvider.Background3;
-
-            TextFlowContainer text;
-
-            AddRangeInternal(new[]
-            {
-                new Container
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = heading_area,
-                    Padding = new MarginPadding(8),
-                    Children = new Drawable[]
-                    {
-                        new SpriteIcon
-                        {
-                            Size = new Vector2(26),
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            Icon = OsuIcon.EditCircle,
-                        },
-                        text = new TextFlowContainer
-                        {
-                            Anchor = Anchor.CentreRight,
-                            Origin = Anchor.CentreRight,
-                            AutoSizeAxes = Axes.Both,
-                        }
-                    }
-                },
-            });
-
-            text.AddText(@"osu!", t => t.Font = OsuFont.TorusAlternate);
-            text.AddText(@"editor", t =>
-            {
-                t.Font = OsuFont.TorusAlternate;
-                t.Colour = colourProvider.Highlight1;
-            });
+            BackgroundColour = colourProvider.Background5;
         }
 
         protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu
@@ -79,14 +42,14 @@ namespace osu.Game.Screens.Edit.Components.Menus
             MaxHeight = MaxHeight,
         };
 
-        protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableEditorBarMenuItem(item);
+        protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableContextMenuItem(item);
 
-        internal partial class DrawableEditorBarMenuItem : DrawableMenuItem
+        private partial class DrawableContextMenuItem : DrawableMenuItem
         {
             private HoverClickSounds hoverClickSounds = null!;
             private TextContainer text = null!;
 
-            public DrawableEditorBarMenuItem(MenuItem item)
+            public DrawableContextMenuItem(MenuItem item)
                 : base(item)
             {
             }
@@ -94,10 +57,10 @@ namespace osu.Game.Screens.Edit.Components.Menus
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                ForegroundColour = colourProvider.Light3;
-                BackgroundColour = colourProvider.Background2;
+                ForegroundColour = colourProvider.Highlight1;
+                BackgroundColour = colourProvider.Background5;
                 ForegroundColourHover = colourProvider.Content1;
-                BackgroundColourHover = colourProvider.Background1;
+                BackgroundColourHover = colourProvider.Background4;
 
                 AddInternal(hoverClickSounds = new HoverClickSounds(HoverSampleSet.MenuOpen));
             }
@@ -190,14 +153,14 @@ namespace osu.Game.Screens.Edit.Components.Menus
                     {
                         NormalText = new OsuSpriteText
                         {
-                            AlwaysPresent = true, // ensures that the menu item does not change width when switching between normal and bold text.
+                            AlwaysPresent = true,
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
                             Font = OsuFont.GetFont(size: DrawableOsuMenuItem.TEXT_SIZE),
                         },
                         BoldText = new OsuSpriteText
                         {
-                            AlwaysPresent = true, // ensures that the menu item does not change width when switching between normal and bold text.
+                            AlwaysPresent = true,
                             Alpha = 0,
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
@@ -214,7 +177,6 @@ namespace osu.Game.Screens.Edit.Components.Menus
                 : base(Direction.Vertical)
             {
                 ItemsContainer.Padding = new MarginPadding();
-
                 MaskingContainer.CornerRadius = 0;
             }
 
@@ -277,19 +239,6 @@ namespace osu.Game.Screens.Edit.Components.Menus
                     Foreground.Padding = new MarginPadding { Vertical = 2 };
                 }
             }
-        }
-
-        /// <summary>
-        /// Standard editor menu bar sized to its content when placed alongside <see cref="EditorContextMenuBar"/>.
-        /// </summary>
-        internal partial class TopMenuBar : EditorMenuBar
-        {
-            public TopMenuBar()
-            {
-                RelativeSizeAxes = Axes.Y;
-            }
-
-            protected override void UpdateSize(Vector2 newSize) => Width = newSize.X + heading_area;
         }
     }
 }

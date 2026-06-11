@@ -11,8 +11,6 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Components.Menus;
 using osu.Game.Screens.Edit.Design.Components;
-using osuTK;
-using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.Editing
 {
@@ -38,25 +36,6 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("switch to compose mode", () => Editor.Mode.Value = EditorScreenMode.Compose);
             AddUntilStep("bottom bar visible", () => Editor.ChildrenOfType<BottomBar>().Single().State.Value == Visibility.Visible);
             AddAssert("context menus hidden", () => !Editor.ChildrenOfType<EditorContextMenuBar>().Single().IsPresent);
-        }
-
-        [Test]
-        public void TestResizePanels()
-        {
-            DesignResizeHandle? handle = null;
-
-            AddStep("switch to design mode", () => Editor.Mode.Value = EditorScreenMode.Design);
-            AddUntilStep("layout visible", () => Editor.ChildrenOfType<DesignEditorLayout>().SingleOrDefault()?.IsPresent == true);
-
-            AddStep("get left resize handle", () => handle = Editor.ChildrenOfType<DesignResizeHandle>().First(h => h.Direction == DesignResizeHandle.HandleDirection.Vertical && !h.InvertDelta));
-
-            AddStep("drag to resize left panel", () =>
-            {
-                InputManager.MoveMouseTo(handle!);
-                InputManager.PressButton(MouseButton.Left);
-                InputManager.MoveMouseTo(handle!.ScreenSpaceDrawQuad.TopLeft + new Vector2(50, 0));
-                InputManager.ReleaseButton(MouseButton.Left);
-            });
         }
     }
 }

@@ -13,30 +13,12 @@ namespace osu.Game.Screens.Edit
 
         public bool HasEditorBottomBar { get; }
 
-        public EditorContextMenuState? ContextMenus { get; }
+        public IReadOnlyList<MenuItem> ContextMenuItems { get; }
 
-        public EditorScreenChrome(bool hasEditorBottomBar = true, EditorContextMenuState? contextMenus = null)
+        public EditorScreenChrome(bool hasEditorBottomBar = true, IReadOnlyList<MenuItem>? contextMenuItems = null)
         {
             HasEditorBottomBar = hasEditorBottomBar;
-            ContextMenus = contextMenus;
-        }
-    }
-
-    public sealed class EditorContextMenuState
-    {
-        public IReadOnlyList<MenuItem> Items { get; private set; }
-
-        public event Action? ItemsChanged;
-
-        public EditorContextMenuState(IReadOnlyList<MenuItem> items)
-        {
-            Items = items;
-        }
-
-        public void Update(IReadOnlyList<MenuItem> items)
-        {
-            Items = items;
-            ItemsChanged?.Invoke();
+            ContextMenuItems = contextMenuItems ?? Array.Empty<MenuItem>();
         }
     }
 }

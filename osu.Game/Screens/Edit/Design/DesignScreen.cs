@@ -17,7 +17,7 @@ namespace osu.Game.Screens.Edit.Design
         public DesignScreen()
             : base(EditorScreenMode.Design)
         {
-            Chrome = new EditorScreenChrome(hasEditorBottomBar: false, contextMenus: new EditorContextMenuState(new MenuItem[]
+            Chrome = new EditorScreenChrome(hasEditorBottomBar: false, contextMenuItems: new MenuItem[]
             {
                 new MenuItem(EditorDesignStrings.Tools)
                 {
@@ -40,7 +40,7 @@ namespace osu.Game.Screens.Edit.Design
                         new EditorMenuItem(EditorDesignStrings.Placeholder),
                     },
                 },
-            }));
+            });
         }
 
         [BackgroundDependencyLoader]

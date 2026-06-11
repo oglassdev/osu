@@ -13,13 +13,11 @@ using osuTK;
 
 namespace osu.Game.Screens.Edit.Components.Menus
 {
-    public partial class EditorContextMenuBar : VisibilityContainer
+    internal partial class EditorContextMenuBar : VisibilityContainer
     {
         private readonly Box background;
         private readonly Circle indicator;
-        private readonly EditorMenuBar menuBar;
-
-        private EditorContextMenuState? contextMenus;
+        private readonly EditorContextMenu menu;
 
         public IReadOnlyList<MenuItem> Items { get; private set; } = Array.Empty<MenuItem>();
 
@@ -54,7 +52,7 @@ namespace osu.Game.Screens.Edit.Components.Menus
                                 Size = new Vector2(8),
                             },
                         },
-                        menuBar = new EditorMenuBar(true)
+                        menu = new EditorContextMenu
                         {
                             RelativeSizeAxes = Axes.Y,
                             MaxHeight = 600,
@@ -71,28 +69,12 @@ namespace osu.Game.Screens.Edit.Components.Menus
             indicator.Colour = colourProvider.Highlight1;
         }
 
-        public void BindTo(EditorContextMenuState? newContextMenus)
+        public void SetItems(IReadOnlyList<MenuItem> items)
         {
-            if (ReferenceEquals(contextMenus, newContextMenus))
-                return;
+            Items = items;
+            menu.Items = items;
 
-            if (contextMenus != null)
-                contextMenus.ItemsChanged -= updateItems;
-
-            contextMenus = newContextMenus;
-
-            if (contextMenus != null)
-                contextMenus.ItemsChanged += updateItems;
-
-            updateItems();
-        }
-
-        private void updateItems()
-        {
-            Items = contextMenus?.Items ?? Array.Empty<MenuItem>();
-            menuBar.Items = Items;
-
-            if (Items.Count > 0)
+            if (items.Count > 0)
                 Show();
             else
                 Hide();
@@ -101,13 +83,5 @@ namespace osu.Game.Screens.Edit.Components.Menus
         protected override void PopIn() => this.FadeIn();
 
         protected override void PopOut() => this.FadeOut();
-
-        protected override void Dispose(bool isDisposing)
-        {
-            if (contextMenus != null)
-                contextMenus.ItemsChanged -= updateItems;
-
-            base.Dispose(isDisposing);
-        }
     }
 }
