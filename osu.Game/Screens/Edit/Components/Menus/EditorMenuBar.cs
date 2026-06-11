@@ -22,21 +22,49 @@ namespace osu.Game.Screens.Edit.Components.Menus
         private const float heading_area = 114;
 
         public EditorMenuBar()
+            : this(false, true)
+        {
+        }
+
+        internal EditorMenuBar(bool contextStyle, bool relativeWidth = false)
             : base(Direction.Horizontal, true)
         {
-            RelativeSizeAxes = Axes.X;
+            if (relativeWidth)
+                RelativeSizeAxes = Axes.X;
 
             MaskingContainer.CornerRadius = 0;
             ItemsContainer.Padding = new MarginPadding();
 
-            ContentContainer.Margin = new MarginPadding { Left = heading_area };
+            if (!contextStyle)
+                ContentContainer.Margin = new MarginPadding { Left = heading_area };
+
             ContentContainer.Masking = true;
+
+            this.contextStyle = contextStyle;
+            this.relativeWidth = relativeWidth;
+        }
+
+        private bool contextStyle { get; }
+        private bool relativeWidth { get; }
+
+        protected override void UpdateSize(Vector2 newSize)
+        {
+            if (relativeWidth)
+            {
+                base.UpdateSize(newSize);
+                return;
+            }
+
+            Width = newSize.X + (contextStyle ? 0 : heading_area);
         }
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, TextureStore textures)
         {
-            BackgroundColour = colourProvider.Background3;
+            BackgroundColour = contextStyle ? colourProvider.Background5 : colourProvider.Background3;
+
+            if (contextStyle)
+                return;
 
             TextFlowContainer text;
 
@@ -79,25 +107,27 @@ namespace osu.Game.Screens.Edit.Components.Menus
             MaxHeight = MaxHeight,
         };
 
-        protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableEditorBarMenuItem(item);
+        protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableEditorBarMenuItem(item, contextStyle);
 
         internal partial class DrawableEditorBarMenuItem : DrawableMenuItem
         {
             private HoverClickSounds hoverClickSounds = null!;
             private TextContainer text = null!;
+            private readonly bool contextStyle;
 
-            public DrawableEditorBarMenuItem(MenuItem item)
+            public DrawableEditorBarMenuItem(MenuItem item, bool contextStyle)
                 : base(item)
             {
+                this.contextStyle = contextStyle;
             }
 
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                ForegroundColour = colourProvider.Light3;
-                BackgroundColour = colourProvider.Background2;
+                ForegroundColour = contextStyle ? colourProvider.Highlight1 : colourProvider.Light3;
+                BackgroundColour = contextStyle ? colourProvider.Background5 : colourProvider.Background2;
                 ForegroundColourHover = colourProvider.Content1;
-                BackgroundColourHover = colourProvider.Background1;
+                BackgroundColourHover = contextStyle ? colourProvider.Background4 : colourProvider.Background1;
 
                 AddInternal(hoverClickSounds = new HoverClickSounds(HoverSampleSet.MenuOpen));
             }

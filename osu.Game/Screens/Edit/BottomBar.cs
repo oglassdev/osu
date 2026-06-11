@@ -7,7 +7,6 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
-using osu.Framework.Input.Events;
 using osu.Framework.Testing;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Components;
@@ -17,7 +16,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit
 {
-    internal partial class BottomBar : CompositeDrawable
+    internal partial class BottomBar : VisibilityContainer
     {
         public TestGameplayButton TestGameplayButton { get; private set; } = null!;
 
@@ -94,7 +93,8 @@ namespace osu.Game.Screens.Edit
             }, true);
         }
 
-        protected override bool OnMouseDown(MouseDownEvent e) => true;
-        protected override bool OnClick(ClickEvent e) => true;
+        protected override void PopIn() => this.FadeIn();
+
+        protected override void PopOut() => this.FadeOut();
     }
 }
